@@ -31,8 +31,45 @@ class Pagination {
 		$result = clone($this->result);
 		return $result->offset($this->start)->limit($this->per_page);
 	}
+	
+	public function get_pager_constraints($show_max_pages=NULL, $page=NULL, $pages=NULL)
+	{
+		if (NULL === $show_max_pages) $show_max_pages = $this->show_max_pages;
+		if (NULL === $page) $page = $this->page;
+		if (NULL === $pages) $pages = $this->pages;
+		
+		$show_max_pages = round($show_max_pages);       // show_max_pages must be integer
+		if ($show_max_pages < 5) $show_max_pages = 5;   // show_max_pages must be atleast 5
+		$left = ceil($show_max_pages/2) - 1;            // ... 10:4, 9:4, 8:3, 7:3, 6:2, 5:2
+		$right = floor($show_max_pages/2);              // ... 10:5, 9:4, 8:4, 7:3, 6:3, 5:2
+		$start_page = $page - $left;
+		$end_page = $page + $right;
+		
+		if ($page > $left and $page < $pages - $right)
+		{
+			$start_page += 2;
+			$end_page -= 2;
+		}
+		if ($start_page < 2)
+		{
+			$start_page = 2;
+			$end_page = $start_page + $show_max_pages - 4;
+		}
+		if ($end_page > $pages - 2)
+		{
+			$end_page = $pages - 1;
+			$start_page = $end_page - $show_max_pages + 4;
+		}
+		if ($start_page < 2)
+		{
+			$start_page = 2;
+		}
+		
+		return compact('show_max_pages','start_page','end_page');
+	}
 
 	public function render() {
+		$constraints = $this->get_pager_constraints();
 		$view = View::factory('pagination/render');
 		$view->page               = $this->page;
 		$view->pages              = $this->pages;
@@ -41,7 +78,9 @@ class Pagination {
 		$view->route              = $this->route;
 		$view->route_params       = $this->route_params;
 		$view->route_page_param   = $this->route_page_param;
-		$view->show_max_pages     = $this->show_max_pages;
+		$view->show_max_pages     = $constraints['show_max_pages'];
+		$view->start_page         = $constraints['start_page'];
+		$view->end_page           = $constraints['end_page'];
 		return $view->render();
 	}
 

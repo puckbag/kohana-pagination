@@ -6,17 +6,17 @@ class Pagination {
 
 	public $route_page_param = 'page';
 	public $show_max_pages   = 10;
-	public $per_page_choices = array(10, 50, 100);
+	public $per_page_choices = array(10, 50, 100, 'all');
 
 	public function __construct(ORM $result, $page=1, $route, array $route_params=array(), $per_page=10) {
 		$this->result       = clone($result);
 		$this->route        = $route;
 		$this->route_params = $route_params;
-		$this->per_page     = $per_page;
-		$this->page         = $page;
-		$this->start        = $per_page * ($page-1);
+		$this->per_page     = intval($per_page); // intval('all') == 0
+		$this->page         = ($this->per_page) ? $page : 1 ;
+		$this->start        = $this->per_page * ($page-1);
 		$this->total        = $result->find_all()->count();
-		$this->pages        = ceil($this->total / $this->per_page);
+		$this->pages        = (!$this->per_page) ? 1 : ceil($this->total / $this->per_page);
 	}
 
 	public function count() {
@@ -29,7 +29,12 @@ class Pagination {
 
 	protected function get_result_set() {
 		$result = clone($this->result);
-		return $result->offset($this->start)->limit($this->per_page);
+		if ($this->per_page)
+		{
+			$result = $result->offset($this->start);
+			$result = $result->limit($this->per_page);
+		}
+		return $result;
 	}
 	
 	public function get_pager_constraints($show_max_pages=NULL, $page=NULL, $pages=NULL)
